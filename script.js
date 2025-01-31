@@ -1,28 +1,68 @@
-const cells = document.querySelectorAll('.cell');
+const gameBoard = document.getElementById('game-board');
 const status = document.getElementById('status');
 const resetButton = document.getElementById('reset-button');
+const startButton = document.getElementById('start-button');
+const playerCountInput = document.getElementById('player-count');
 
-let currentPlayer = 'X';
-let board = ['', '', '', '', '', '', '', '', ''];
+let currentPlayerIndex = 0;
+let players = [];
+let board = [];
 let gameActive = true;
 
+// Get number of players and initialize
+const initializeGame = () => {
+    const playerCount = parseInt(playerCountInput.value);
+
+    if (isNaN(playerCount) || playerCount < 2 || playerCount > 10) {
+        alert("Please enter a valid number of players between 2 and 10.");
+        return;
+    }
+
+    players = Array.from({ length: playerCount }, (_, i) => String.fromCharCode(88 + i)); // Generate symbols for players (X, O, P, Q...)
+    const gridSize = Math.ceil(Math.sqrt(playerCount * playerCount)); // Dynamically calculate grid size
+
+    board = Array(gridSize * gridSize).fill('');
+    currentPlayerIndex = 0;
+    gameActive = true;
+    status.textContent = `Player ${players[currentPlayerIndex]}'s turn`;
+
+    generateBoard(gridSize);
+
+    resetButton.style.display = 'block';
+};
+
+// Generate dynamic game board
+const generateBoard = (gridSize) => {
+    gameBoard.style.gridTemplateColumns = `repeat(${gridSize}, 100px)`;
+    gameBoard.innerHTML = '';
+
+    for (let i = 0; i < gridSize * gridSize; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.cell = i;
+        cell.addEventListener('click', handleClick);
+        gameBoard.appendChild(cell);
+    }
+};
+
+// Check for a winner
 const checkWinner = () => {
-    const winPatterns = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-    ];
+    const gridSize = Math.sqrt(board.length);
+    const winPatterns = [];
+
+    // Rows, Columns, and Diagonals win conditions
+    for (let i = 0; i < gridSize; i++) {
+        winPatterns.push([...Array(gridSize)].map((_, j) => i * gridSize + j)); // Rows
+        winPatterns.push([...Array(gridSize)].map((_, j) => i + j * gridSize)); // Columns
+    }
+    winPatterns.push([...Array(gridSize)].map((_, i) => i * (gridSize + 1))); // Diagonal \
+    winPatterns.push([...Array(gridSize)].map((_, i) => (i + 1) * (gridSize - 1))); // Diagonal /
 
     for (const pattern of winPatterns) {
-        const [a, b, c] = pattern;
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        const [a, ...rest] = pattern;
+        if (board[a] && rest.every(index => board[index] === board[a])) {
             gameActive = false;
-            status.textContent = `Player ${currentPlayer} wins!`;
+            status.textContent = `Player ${players[currentPlayerIndex]} wins!`;
             return;
         }
     }
@@ -33,35 +73,35 @@ const checkWinner = () => {
     }
 };
 
+// Handle cell click
 const handleClick = (e) => {
     const cellIndex = e.target.dataset.cell;
 
     if (board[cellIndex] !== '' || !gameActive) return;
 
-    board[cellIndex] = currentPlayer;
-    e.target.textContent = currentPlayer;
+    board[cellIndex] = players[currentPlayerIndex];
+    e.target.textContent = players[currentPlayerIndex];
 
     checkWinner();
 
     if (gameActive) {
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        status.textContent = `Player ${currentPlayer}'s turn`;
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        status.textContent = `Player ${players[currentPlayerIndex]}'s turn`;
     }
 };
 
+// Reset game
 const resetGame = () => {
-    board = ['', '', '', '', '', '', '', '', ''];
-    currentPlayer = 'X';
+    board.fill('');
+    currentPlayerIndex = 0;
     gameActive = true;
-    status.textContent = `Player X's turn`;
+    status.textContent = `Player ${players[currentPlayerIndex]}'s turn`;
 
-    cells.forEach(cell => {
+    gameBoard.querySelectorAll('.cell').forEach(cell => {
         cell.textContent = '';
     });
 };
 
-cells.forEach(cell => {
-    cell.addEventListener('click', handleClick);
-});
-
+// Start button to initialize game with specific number of players
+startButton.addEventListener('click', initializeGame);
 resetButton.addEventListener('click', resetGame);
